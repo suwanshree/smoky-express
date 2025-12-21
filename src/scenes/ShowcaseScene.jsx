@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { useControls } from "leva";
 
 /* ================================================================= */
 /* 🔧 HELPER: ROUNDED CANOPY                                          */
@@ -49,21 +50,41 @@ function RoundedCanopy({
   );
 }
 
+/* ---------------- White Inner Plate ---------------- */
+function InnerWhitePlate({ width, depth, position, color }) {
+  return (
+    <mesh position={position}>
+      <boxGeometry args={[width, 0.2, depth]} />
+      <meshStandardMaterial color={color} roughness={0.3} />
+    </mesh>
+  );
+}
+
+/* ---------------- Double Door ---------------- */
+function DoubleDoor({ width, height, depth, position, color }) {
+  const doorWidth = width / 2 - 0.025;
+  return (
+    <group position={position}>
+      <mesh position={[-doorWidth / 2 - 0.025, height / 2, 0]}>
+        <boxGeometry args={[doorWidth, height, depth]} />
+        <meshStandardMaterial color={color} roughness={0.6} />
+      </mesh>
+      <mesh position={[doorWidth / 2 + 0.025, height / 2, 0]}>
+        <boxGeometry args={[doorWidth, height, depth]} />
+        <meshStandardMaterial color={color} roughness={0.6} />
+      </mesh>
+    </group>
+  );
+}
+
 /* ================================================================= */
 /* 🏗️ MAIN SCENE                                                     */
 /* ================================================================= */
 export default function ShowcaseScene() {
   const GROUND_Y = 0;
 
-  const COLOR_PILLARS = "#ffffff";
-  const COLOR_CANOPY_SIDES = "#facc15";
-  const COLOR_CANOPY_TOP = "#ffffff";
-  const COLOR_BUILDING = "#ffffff";
-  const COLOR_BUILDING_STRIPE = "#2563eb";
-
   const PLAZA_WIDTH = 200;
   const PLAZA_DEPTH = 200;
-
   const CANOPY_DEPTH = 7;
   const CANOPY_THICKNESS = 1.5;
   const CANOPY_RADIUS = 0.8;
@@ -91,35 +112,22 @@ export default function ShowcaseScene() {
   const VACUUM_CANOPY_HEIGHT = 8;
   const VACUUM_PILLAR_X = [-7, 2, 7];
 
-  /* ---------------- White Inner Plate ---------------- */
-  function InnerWhitePlate({ width, depth, position }) {
-    return (
-      <mesh position={position}>
-        <boxGeometry args={[width, 0.2, depth]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.3} />
-      </mesh>
-    );
-  }
-
-  /* ---------------- Double Door ---------------- */
-  function DoubleDoor({ width, height, depth, position }) {
-    const doorWidth = width / 2 - 0.05; // two doors with small gap
-    const doorHeight = height;
-    const doorDepth = depth;
-
-    return (
-      <group position={position}>
-        <mesh position={[-doorWidth / 2 - 0.025, doorHeight / 2, 0]}>
-          <boxGeometry args={[doorWidth, doorHeight, doorDepth]} />
-          <meshStandardMaterial color="#68340f" roughness={0.6} /> {/* brown */}
-        </mesh>
-        <mesh position={[doorWidth / 2 + 0.025, doorHeight / 2, 0]}>
-          <boxGeometry args={[doorWidth, doorHeight, doorDepth]} />
-          <meshStandardMaterial color="#68340f" roughness={0.6} />
-        </mesh>
-      </group>
-    );
-  }
+  /* ---------------- Colors from Leva ---------------- */
+  const {
+    pillarColor,
+    canopySideColor,
+    canopyTopColor,
+    buildingWallsColor,
+    buildingStripeColor,
+    buildingDoorColor,
+  } = useControls("Colors", {
+    pillarColor: { value: "#ffffff", label: "Pillars" },
+    canopySideColor: { value: "#facc15", label: "Canopy Side" },
+    canopyTopColor: { value: "#ffffff", label: "Canopy Bot" },
+    buildingWallsColor: { value: "#ffffff", label: "Walls" },
+    buildingStripeColor: { value: "#2563eb", label: "Stripe" },
+    buildingDoorColor: { value: "#68340f", label: "Door" },
+  });
 
   return (
     <>
@@ -140,7 +148,7 @@ export default function ShowcaseScene() {
             <cylinderGeometry
               args={[PILLAR_RADIUS, PILLAR_RADIUS, PAY_HEIGHT + 4, 24]}
             />
-            <meshStandardMaterial color={COLOR_PILLARS} />
+            <meshStandardMaterial color={pillarColor} />
           </mesh>
         ))}
         <RoundedCanopy
@@ -149,13 +157,14 @@ export default function ShowcaseScene() {
           depth={CANOPY_DEPTH}
           radius={CANOPY_RADIUS}
           position={[0, PAY_CANOPY_Y, 0]}
-          sideColor={COLOR_CANOPY_SIDES}
-          topBottomColor={COLOR_CANOPY_TOP}
+          sideColor={canopySideColor}
+          topBottomColor={canopyTopColor}
         />
         <InnerWhitePlate
           width={PAY_CANOPY_WIDTH * 0.9}
           depth={CANOPY_DEPTH * 0.9}
           position={[0, PAY_CANOPY_Y - CANOPY_THICKNESS / 2 + 0.7, 0]}
+          color={canopyTopColor}
         />
       </group>
 
@@ -164,17 +173,15 @@ export default function ShowcaseScene() {
         {/* Walls */}
         <mesh position={[0, WASH_HEIGHT / 2, 0]} castShadow receiveShadow>
           <boxGeometry args={[WASH_WIDTH, WASH_HEIGHT + 8, WASH_DEPTH]} />
-          <meshStandardMaterial color={COLOR_BUILDING} />
+          <meshStandardMaterial color={buildingWallsColor} />
         </mesh>
-
         {/* Stripe */}
         <mesh position={[0, STRIPE_Y, 0]} castShadow>
           <boxGeometry
             args={[WASH_WIDTH + 0.01, STRIPE_HEIGHT, WASH_DEPTH + 0.01]}
           />
-          <meshStandardMaterial color={COLOR_BUILDING_STRIPE} />
+          <meshStandardMaterial color={buildingStripeColor} />
         </mesh>
-
         {/* Canopy */}
         <RoundedCanopy
           width={WASH_CANOPY_WIDTH}
@@ -186,8 +193,8 @@ export default function ShowcaseScene() {
             WASH_HEIGHT,
             -WASH_DEPTH / 2 - CANOPY_DEPTH / 2 + 1,
           ]}
-          sideColor={COLOR_CANOPY_SIDES}
-          topBottomColor={COLOR_CANOPY_TOP}
+          sideColor={canopySideColor}
+          topBottomColor={canopyTopColor}
         />
         <InnerWhitePlate
           width={WASH_CANOPY_WIDTH * 0.95}
@@ -197,18 +204,18 @@ export default function ShowcaseScene() {
             WASH_HEIGHT - CANOPY_THICKNESS / 2 + 0.7,
             -WASH_DEPTH / 2 - CANOPY_DEPTH / 2 + 1,
           ]}
+          color={canopyTopColor}
         />
-
         {/* Doors */}
         <DoubleDoor
-          width={5} // total width of the door section
+          width={5}
           height={WASH_HEIGHT * 0.65}
           depth={0.1}
-          position={[0, 0, -WASH_DEPTH / 2 - 0.15]} // in front of building
+          position={[0, 0, -WASH_DEPTH / 2 - 0.15]}
+          color={buildingDoorColor}
         />
-
         {/* Canopy Pillars */}
-        {[-1, -0.5, 0.5, 1].map((xIndex) => (
+        {[-0.8, -0.4, 0.3, 0.7].map((xIndex) => (
           <mesh
             key={xIndex}
             position={[
@@ -221,9 +228,10 @@ export default function ShowcaseScene() {
             <cylinderGeometry
               args={[PILLAR_RADIUS, PILLAR_RADIUS, WASH_HEIGHT, 24]}
             />
-            <meshStandardMaterial color={COLOR_PILLARS} />
+            <meshStandardMaterial color={pillarColor} />
           </mesh>
         ))}
+        s
       </group>
 
       {/* Vacuum Area */}
@@ -234,20 +242,21 @@ export default function ShowcaseScene() {
           depth={CANOPY_DEPTH}
           radius={CANOPY_RADIUS}
           position={[0, VACUUM_CANOPY_HEIGHT, 0]}
-          sideColor={COLOR_CANOPY_SIDES}
-          topBottomColor={COLOR_CANOPY_TOP}
+          sideColor={canopySideColor}
+          topBottomColor={canopyTopColor}
         />
         <InnerWhitePlate
           width={VACUUM_CANOPY_WIDTH * 0.9}
           depth={CANOPY_DEPTH * 0.9}
           position={[0, VACUUM_CANOPY_HEIGHT - CANOPY_THICKNESS / 2 + 0.7, 0]}
+          color={canopyTopColor}
         />
         {VACUUM_PILLAR_X.map((x, i) => (
           <mesh key={i} position={[x, VACUUM_CANOPY_HEIGHT / 2, 0]} castShadow>
             <cylinderGeometry
               args={[PILLAR_RADIUS, PILLAR_RADIUS, VACUUM_CANOPY_HEIGHT, 24]}
             />
-            <meshStandardMaterial color={COLOR_PILLARS} />
+            <meshStandardMaterial color={pillarColor} />
           </mesh>
         ))}
       </group>

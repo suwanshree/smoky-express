@@ -5,11 +5,13 @@ import Lights from "./components/Lights";
 import PlayerController from "./components/Player/PlayerController";
 import { Physics } from "@react-three/rapier";
 import ShowcaseScene from "./scenes/ShowcaseScene";
+import { Leva } from "leva";
 import "./styles/globals.css";
 
 export default function App() {
   return (
     <>
+      <Leva collapsed={false} />
       <Canvas
         shadows
         camera={{ fov: 70, position: [0, 1.6, 8] }}
