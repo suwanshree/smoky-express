@@ -120,8 +120,8 @@ export default function ShowcaseScene() {
   const WASH_HEIGHT = 8;
   const WASH_DEPTH = 24;
 
-  const STRIPE_HEIGHT = 1.2;
-  const STRIPE_Y = WASH_HEIGHT - 1.2;
+  const STRIPE_HEIGHT = 1.5;
+  const STRIPE_Y = WASH_HEIGHT - 1.5;
 
   const WASH_CANOPY_WIDTH = WASH_WIDTH - 6;
   const WASH_CANOPY_OFFSET_X = 2;
