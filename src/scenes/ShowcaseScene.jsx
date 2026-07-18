@@ -18,6 +18,19 @@ const OOLTEWAH_COLOR_CONTROLS = {
   carwashTextColor: { value: "#000000", label: "CARWASH Text" },
 };
 
+const CHATTANOOGA_COLOR_CONTROLS = {
+  buildingWallsColor: { value: "#ed2024", label: "Walls" },
+  buildingDoorColor: { value: "#000000", label: "Doors + Front Stripe" },
+  roofColor: { value: "#000000", label: "Main + Tent Roof" },
+  roofRidgeColor: { value: "#000000", label: "Ridges / Gutters" },
+  arcTrimColor: { value: "#000000", label: "Arc + Cavetto Trim" },
+  windowColor: { value: "#2a2a2a", label: "Windows" },
+  windowTrimColor: { value: "#000000", label: "Window Trim" },
+  payCanopyRoofColor: { value: "#ed2024", label: "Pay Canopy Roof" },
+  payCanopyPoleColor: { value: "#000000", label: "Pay Canopy Poles" },
+  payTerminalColor: { value: "#ed2024", label: "Pay Terminals" },
+};
+
 /*
   Site orientation map:
   Side 1: front, facing -Z toward the initial camera
@@ -167,9 +180,9 @@ function GateDoor({ width, height, position, color }) {
   );
 }
 
-function ServiceDoor({ width, height, position, color }) {
+function ServiceDoor({ width, height, position, rotation = [0, 0, 0], color }) {
   return (
-    <group position={position}>
+    <group position={position} rotation={rotation}>
       <mesh position={[0, height / 2, 0]} castShadow>
         <boxGeometry args={[width, height, 0.12]} />
         <meshStandardMaterial color={color} roughness={0.56} metalness={0.05} />
@@ -182,12 +195,156 @@ function ServiceDoor({ width, height, position, color }) {
   );
 }
 
+function DoubleServiceDoor({
+  width,
+  height,
+  position,
+  rotation = [0, 0, 0],
+  color,
+}) {
+  const gap = 0.08;
+  const panelWidth = (width - gap) / 2;
+
+  return (
+    <group position={position} rotation={rotation}>
+      <mesh position={[0, height / 2, 0.025]} castShadow>
+        <boxGeometry args={[width + 0.28, height + 0.28, 0.08]} />
+        <meshStandardMaterial color={color} roughness={0.52} metalness={0.06} />
+      </mesh>
+      {[-1, 1].map((direction) => (
+        <mesh
+          key={`panel-${direction}`}
+          position={[
+            direction * (panelWidth / 2 + gap / 2),
+            height / 2,
+            -0.045,
+          ]}
+          castShadow
+        >
+          <boxGeometry args={[panelWidth, height, 0.12]} />
+          <meshStandardMaterial color={color} roughness={0.58} metalness={0.06} />
+        </mesh>
+      ))}
+      <mesh position={[0, height / 2, -0.13]} castShadow>
+        <boxGeometry args={[0.06, height - 0.2, 0.04]} />
+        <meshStandardMaterial color="#3f3f46" roughness={0.44} />
+      </mesh>
+      {[-1, 1].map((direction) => (
+        <mesh
+          key={`handle-${direction}`}
+          position={[direction * 0.18, height * 0.52, -0.16]}
+          castShadow
+        >
+          <sphereGeometry args={[0.08, 12, 12]} />
+          <meshStandardMaterial color="#d1d5db" roughness={0.28} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 function SideCarDoor({ side, width, height, position, color }) {
   const rotationY = side === "left" ? Math.PI / 2 : -Math.PI / 2;
 
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
       <GateDoor width={width} height={height} position={[0, 0, 0]} color={color} />
+    </group>
+  );
+}
+
+function CavettoMoldingStrip({
+  length,
+  projection,
+  drop,
+  position,
+  rotation = [0, 0, 0],
+  color,
+}) {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.lineTo(projection, 0);
+  shape.quadraticCurveTo(
+    projection * 0.88,
+    -drop * 0.2,
+    projection * 0.64,
+    -drop * 0.46,
+  );
+  shape.quadraticCurveTo(projection * 0.36, -drop * 0.76, 0, -drop);
+  shape.lineTo(0, 0);
+
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: length,
+    bevelEnabled: false,
+    curveSegments: 10,
+  });
+
+  return (
+    <mesh
+      geometry={geometry}
+      position={position}
+      rotation={rotation}
+      castShadow
+      receiveShadow
+    >
+      <meshStandardMaterial
+        color={color}
+        roughness={0.52}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+}
+
+function PillarCavettoCap({ centerX, centerZ, topY, width, depth, color }) {
+  const projection = 0.28;
+  const drop = 0.34;
+  const capHeight = 0.14;
+  const topLift = 0.08;
+  const xLength = width + projection * 2;
+  const zLength = depth + projection * 2;
+
+  return (
+    <group>
+      <mesh
+        position={[centerX, topY + capHeight / 2 + topLift, centerZ]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry args={[xLength, capHeight, zLength]} />
+        <meshStandardMaterial color={color} roughness={0.5} />
+      </mesh>
+      <CavettoMoldingStrip
+        length={zLength}
+        projection={projection}
+        drop={drop}
+        position={[centerX + width / 2, topY + topLift, centerZ - zLength / 2]}
+        color={color}
+      />
+      <CavettoMoldingStrip
+        length={zLength}
+        projection={projection}
+        drop={drop}
+        position={[centerX - width / 2, topY + topLift, centerZ + zLength / 2]}
+        rotation={[0, Math.PI, 0]}
+        color={color}
+      />
+      <CavettoMoldingStrip
+        length={xLength}
+        projection={projection}
+        drop={drop}
+        position={[centerX - xLength / 2, topY + topLift, centerZ - depth / 2]}
+        rotation={[0, Math.PI / 2, 0]}
+        color={color}
+      />
+      <CavettoMoldingStrip
+        length={xLength}
+        projection={projection}
+        drop={drop}
+        position={[centerX + xLength / 2, topY + topLift, centerZ + depth / 2]}
+        rotation={[0, -Math.PI / 2, 0]}
+        color={color}
+      />
     </group>
   );
 }
@@ -275,9 +432,11 @@ function GabledRoof({
   roofColor,
   ridgeColor,
   ridgeAxis = "z",
-  ribCount = 6,
+  ribCount = 12,
+  overhang = 1.3,
+  showFrontEave = true,
+  showBackEave = true,
 }) {
-  const overhang = 1.3;
   const ridgeLength =
     ridgeAxis === "x" ? width + overhang * 2 : depth + overhang * 2;
   const run = (ridgeAxis === "x" ? depth : width) / 2 + overhang;
@@ -339,14 +498,18 @@ function GabledRoof({
           <cylinderGeometry args={[0.2, 0.2, ridgeLength + 0.3, 16]} />
           <meshStandardMaterial color={ridgeColor} roughness={0.28} />
         </mesh>
-        <mesh position={[0, wallHeight + 0.1, -run]} castShadow>
-          <boxGeometry args={[ridgeLength, 0.32, 0.3]} />
-          <meshStandardMaterial color={ridgeColor} roughness={0.35} />
-        </mesh>
-        <mesh position={[0, wallHeight + 0.1, run]} castShadow>
-          <boxGeometry args={[ridgeLength, 0.32, 0.3]} />
-          <meshStandardMaterial color={ridgeColor} roughness={0.35} />
-        </mesh>
+        {showFrontEave ? (
+          <mesh position={[0, wallHeight + 0.1, -run]} castShadow>
+            <boxGeometry args={[ridgeLength, 0.32, 0.3]} />
+            <meshStandardMaterial color={ridgeColor} roughness={0.35} />
+          </mesh>
+        ) : null}
+        {showBackEave ? (
+          <mesh position={[0, wallHeight + 0.1, run]} castShadow>
+            <boxGeometry args={[ridgeLength, 0.32, 0.3]} />
+            <meshStandardMaterial color={ridgeColor} roughness={0.35} />
+          </mesh>
+        ) : null}
       </group>
     );
   }
@@ -398,14 +561,18 @@ function GabledRoof({
         <cylinderGeometry args={[0.2, 0.2, ridgeLength + 0.3, 16]} />
         <meshStandardMaterial color={ridgeColor} roughness={0.28} />
       </mesh>
-      <mesh position={[0, wallHeight + 0.1, -ridgeLength / 2]} castShadow>
-        <boxGeometry args={[width + overhang * 2.1, 0.32, 0.3]} />
-        <meshStandardMaterial color={ridgeColor} roughness={0.35} />
-      </mesh>
-      <mesh position={[0, wallHeight + 0.1, ridgeLength / 2]} castShadow>
-        <boxGeometry args={[width + overhang * 2.1, 0.32, 0.3]} />
-        <meshStandardMaterial color={ridgeColor} roughness={0.35} />
-      </mesh>
+      {showFrontEave ? (
+        <mesh position={[0, wallHeight + 0.1, -ridgeLength / 2]} castShadow>
+          <boxGeometry args={[width + overhang * 2.1, 0.32, 0.3]} />
+          <meshStandardMaterial color={ridgeColor} roughness={0.35} />
+        </mesh>
+      ) : null}
+      {showBackEave ? (
+        <mesh position={[0, wallHeight + 0.1, ridgeLength / 2]} castShadow>
+          <boxGeometry args={[width + overhang * 2.1, 0.32, 0.3]} />
+          <meshStandardMaterial color={ridgeColor} roughness={0.35} />
+        </mesh>
+      ) : null}
     </group>
   );
 }
@@ -419,7 +586,10 @@ function FrontGableRoof({
   roofColor,
   ridgeColor,
   gableColor = roofColor,
-  ribCount = 6,
+  ribCount = 12,
+  overhang,
+  showFrontEave,
+  showBackEave,
 }) {
   return (
     <group position={position}>
@@ -444,6 +614,9 @@ function FrontGableRoof({
         ridgeColor={ridgeColor}
         ridgeAxis="z"
         ribCount={ribCount}
+        overhang={overhang}
+        showFrontEave={showFrontEave}
+        showBackEave={showBackEave}
       />
     </group>
   );
@@ -718,6 +891,1273 @@ function BuildingStripe({
   );
 }
 
+function PlainWindow({
+  width,
+  height,
+  position,
+  rotation = [0, 0, 0],
+  trimColor,
+  windowColor,
+}) {
+  return (
+    <group position={position} rotation={rotation}>
+      <mesh position={[0, height / 2, -0.035]} castShadow>
+        <boxGeometry args={[width + 0.24, height + 0.24, 0.08]} />
+        <meshStandardMaterial color={trimColor} roughness={0.42} />
+      </mesh>
+      <mesh position={[0, height / 2, -0.1]} castShadow>
+        <boxGeometry args={[width, height, 0.08]} />
+        <meshPhysicalMaterial
+          color={windowColor}
+          roughness={0.2}
+          metalness={0.05}
+          transparent
+          opacity={0.78}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function ChattanoogaRoofEnd({
+  x,
+  depth,
+  wallHeight,
+  frontRise,
+  backRise,
+  frontRidgeZ,
+  backRidgeZ,
+  frontOverhang,
+  backOverhang,
+  color,
+}) {
+  const shape = new THREE.Shape();
+  shape.moveTo(-depth / 2 - frontOverhang, 0);
+  shape.lineTo(frontRidgeZ, frontRise);
+  shape.lineTo(backRidgeZ, backRise);
+  shape.lineTo(depth / 2 + backOverhang, 0);
+  shape.lineTo(-depth / 2 - frontOverhang, 0);
+
+  const geometry = new THREE.ShapeGeometry(shape);
+
+  return (
+    <mesh
+      geometry={geometry}
+      position={[x, wallHeight, 0]}
+      rotation={[0, -Math.PI / 2, 0]}
+      castShadow
+      receiveShadow
+    >
+      <meshStandardMaterial
+        color={color}
+        roughness={0.56}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+}
+
+function ChattanoogaOffsetRoof({
+  width,
+  depth,
+  wallHeight,
+  frontRise,
+  backRise,
+  roofColor,
+  ridgeColor,
+  wallColor,
+  frontOverhang = 0.55,
+  backOverhang = 1.25,
+  ribCount = 36,
+  showLeftEnd = true,
+  ridgeGapLeftInset = 0,
+  ridgeGapRightInset = 0,
+}) {
+  const ridgePlateDepth = 0.18;
+  const frontRidgeZ = 0;
+  const backRidgeZ = 0;
+  const frontEaveZ = -depth / 2 - frontOverhang;
+  const backEaveZ = depth / 2 + backOverhang;
+  const frontRun = frontRidgeZ - frontEaveZ;
+  const backRun = backEaveZ - backRidgeZ;
+  const frontSlope = Math.atan2(frontRise, frontRun);
+  const backSlope = Math.atan2(backRise, backRun);
+  const frontPanelLength = Math.hypot(frontRun, frontRise);
+  const backPanelLength = Math.hypot(backRun, backRise);
+  const ridgeLength = width + Math.max(frontOverhang, backOverhang) * 2;
+  const ridgeGapHeight = Math.max(0.16, backRise - frontRise);
+  const ridgeGapLength = Math.max(
+    0.1,
+    ridgeLength - ridgeGapLeftInset - ridgeGapRightInset,
+  );
+  const ridgeGapX = (ridgeGapLeftInset - ridgeGapRightInset) / 2;
+  const ribPositions = Array.from({ length: ribCount }, (_, index) => {
+    if (ribCount === 1) {
+      return 0;
+    }
+
+    return -0.46 + (0.92 * index) / (ribCount - 1);
+  });
+  const panelRib = (side, fraction) => {
+    const isFront = side === "front";
+    const run = isFront ? frontRun : backRun;
+    const rise = isFront ? frontRise : backRise;
+    const slope = isFront ? frontSlope : backSlope;
+    const eaveZ = isFront ? frontEaveZ : backEaveZ;
+    const ridgeZ = isFront ? frontRidgeZ : backRidgeZ;
+    const x = ridgeLength * fraction;
+
+    return (
+      <mesh
+        key={`${side}-${fraction}`}
+        position={[
+          x,
+          wallHeight + rise / 2 + 0.2,
+          (eaveZ + ridgeZ) / 2,
+        ]}
+        rotation={[isFront ? -slope : slope, 0, 0]}
+        castShadow
+      >
+        <boxGeometry args={[0.15, 0.2, Math.hypot(run, rise) + 0.18]} />
+        <meshStandardMaterial color={ridgeColor} roughness={0.32} />
+      </mesh>
+    );
+  };
+
+  return (
+    <group>
+      {showLeftEnd ? (
+        <ChattanoogaRoofEnd
+          x={-width / 2 - 0.08}
+          depth={depth}
+          wallHeight={wallHeight}
+          frontRise={frontRise}
+          backRise={backRise}
+          frontRidgeZ={frontRidgeZ}
+          backRidgeZ={backRidgeZ}
+          frontOverhang={frontOverhang}
+          backOverhang={backOverhang}
+          color={wallColor}
+        />
+      ) : null}
+      <mesh
+        position={[0, wallHeight + frontRise / 2, (frontEaveZ + frontRidgeZ) / 2]}
+        rotation={[-frontSlope, 0, 0]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry args={[ridgeLength, 0.36, frontPanelLength]} />
+        <meshStandardMaterial color={roofColor} roughness={0.4} />
+      </mesh>
+      <mesh
+        position={[0, wallHeight + backRise / 2, (backEaveZ + backRidgeZ) / 2]}
+        rotation={[backSlope, 0, 0]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry args={[ridgeLength, 0.36, backPanelLength]} />
+        <meshStandardMaterial color={roofColor} roughness={0.4} />
+      </mesh>
+      <mesh
+        position={[
+          ridgeGapX,
+          wallHeight + frontRise + ridgeGapHeight / 2,
+          frontRidgeZ,
+        ]}
+        castShadow
+      >
+        <boxGeometry args={[ridgeGapLength, ridgeGapHeight, ridgePlateDepth]} />
+        <meshStandardMaterial color={wallColor} roughness={0.5} />
+      </mesh>
+      {ribPositions.map((fraction) => panelRib("front", fraction))}
+      {ribPositions.map((fraction) => panelRib("back", fraction))}
+      <mesh
+        position={[0, wallHeight + frontRise + 0.13, frontRidgeZ]}
+        rotation={[0, 0, Math.PI / 2]}
+        castShadow
+      >
+        <cylinderGeometry args={[0.18, 0.18, ridgeLength + 0.3, 16]} />
+        <meshStandardMaterial color={ridgeColor} roughness={0.28} />
+      </mesh>
+      <mesh
+        position={[0, wallHeight + backRise + 0.13, backRidgeZ]}
+        rotation={[0, 0, Math.PI / 2]}
+        castShadow
+      >
+        <cylinderGeometry args={[0.2, 0.2, ridgeLength + 0.3, 16]} />
+        <meshStandardMaterial color={ridgeColor} roughness={0.28} />
+      </mesh>
+      <mesh position={[0, wallHeight + 0.1, frontEaveZ]} castShadow>
+        <boxGeometry args={[ridgeLength, 0.32, 0.3]} />
+        <meshStandardMaterial color={ridgeColor} roughness={0.35} />
+      </mesh>
+      <mesh position={[0, wallHeight + 0.1, backEaveZ]} castShadow>
+        <boxGeometry args={[ridgeLength, 0.32, 0.3]} />
+        <meshStandardMaterial color={ridgeColor} roughness={0.35} />
+      </mesh>
+    </group>
+  );
+}
+
+function RightSideRearRoofInfill({
+  x,
+  wallHeight,
+  startZ,
+  endZ,
+  roofHeightAtStart,
+  color,
+}) {
+  const shape = new THREE.Shape();
+  shape.moveTo(startZ, wallHeight);
+  shape.lineTo(startZ, roofHeightAtStart);
+  shape.lineTo(endZ, wallHeight);
+  shape.lineTo(startZ, wallHeight);
+
+  const geometry = new THREE.ShapeGeometry(shape);
+
+  return (
+    <mesh
+      geometry={geometry}
+      position={[x, 0, 0]}
+      rotation={[0, -Math.PI / 2, 0]}
+      castShadow
+      receiveShadow
+    >
+      <meshStandardMaterial
+        color={color}
+        roughness={0.54}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+}
+
+function LeftRoofTriangleInfill({ x, points, color }) {
+  const shape = new THREE.Shape();
+  shape.moveTo(points[0][0], points[0][1]);
+  points.slice(1).forEach(([z, y]) => {
+    shape.lineTo(z, y);
+  });
+  shape.lineTo(points[0][0], points[0][1]);
+
+  const geometry = new THREE.ShapeGeometry(shape);
+
+  return (
+    <mesh
+      geometry={geometry}
+      position={[x, 0, 0]}
+      rotation={[0, -Math.PI / 2, 0]}
+      castShadow
+      receiveShadow
+    >
+      <meshStandardMaterial
+        color={color}
+        roughness={0.54}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+}
+
+function ChattanoogaRearRoofExtension({
+  xCenter,
+  width,
+  roofCenterZ,
+  roofDepth,
+  wallHeight,
+  frontRise,
+  backRise,
+  backOverhang,
+  roofColor,
+  ridgeColor,
+  wallColor,
+  ribCount = 6,
+  ridgeGapLeftInset = 0,
+  ridgeGapRightInset = 0,
+}) {
+  const ridgePlateDepth = 0.18;
+  const ridgeZ = roofCenterZ;
+  const backEaveZ = roofCenterZ + roofDepth / 2 + backOverhang;
+  const backRun = backEaveZ - ridgeZ;
+  const backSlope = Math.atan2(backRise, backRun);
+  const backPanelLength = Math.hypot(backRun, backRise);
+  const ridgeGapHeight = Math.max(0.16, backRise - frontRise);
+  const ridgeGapLength = Math.max(
+    0.1,
+    width - ridgeGapLeftInset - ridgeGapRightInset,
+  );
+  const ridgeGapX = xCenter + (ridgeGapLeftInset - ridgeGapRightInset) / 2;
+  const ribPositions = Array.from({ length: ribCount }, (_, index) => {
+    if (ribCount === 1) {
+      return 0;
+    }
+
+    return -0.44 + (0.88 * index) / (ribCount - 1);
+  });
+
+  return (
+    <group>
+      <mesh
+        position={[xCenter, wallHeight + backRise / 2, (backEaveZ + ridgeZ) / 2]}
+        rotation={[backSlope, 0, 0]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry args={[width, 0.36, backPanelLength]} />
+        <meshStandardMaterial color={roofColor} roughness={0.4} />
+      </mesh>
+      <mesh
+        position={[
+          ridgeGapX,
+          wallHeight + frontRise + ridgeGapHeight / 2,
+          ridgeZ,
+        ]}
+        castShadow
+      >
+        <boxGeometry args={[ridgeGapLength, ridgeGapHeight, ridgePlateDepth]} />
+        <meshStandardMaterial color={wallColor} roughness={0.5} />
+      </mesh>
+      {ribPositions.map((fraction) => (
+        <mesh
+          key={fraction}
+          position={[
+            xCenter + width * fraction,
+            wallHeight + backRise / 2 + 0.2,
+            (backEaveZ + ridgeZ) / 2,
+          ]}
+          rotation={[backSlope, 0, 0]}
+          castShadow
+        >
+          <boxGeometry args={[0.15, 0.2, backPanelLength + 0.18]} />
+          <meshStandardMaterial color={ridgeColor} roughness={0.32} />
+        </mesh>
+      ))}
+      <mesh
+        position={[xCenter, wallHeight + backRise + 0.13, ridgeZ]}
+        rotation={[0, 0, Math.PI / 2]}
+        castShadow
+      >
+        <cylinderGeometry args={[0.2, 0.2, width + 0.3, 16]} />
+        <meshStandardMaterial color={ridgeColor} roughness={0.28} />
+      </mesh>
+      <mesh position={[xCenter, wallHeight + 0.1, backEaveZ]} castShadow>
+        <boxGeometry args={[width, 0.32, 0.3]} />
+        <meshStandardMaterial color={ridgeColor} roughness={0.35} />
+      </mesh>
+    </group>
+  );
+}
+
+function ChattanoogaFrontRoofExtension({
+  xCenter,
+  width,
+  roofCenterZ,
+  roofDepth,
+  wallHeight,
+  frontRise,
+  frontOverhang,
+  roofColor,
+  ridgeColor,
+  ribCount = 6,
+}) {
+  const ridgeZ = roofCenterZ;
+  const frontEaveZ = roofCenterZ - roofDepth / 2 - frontOverhang;
+  const frontRun = ridgeZ - frontEaveZ;
+  const frontSlope = Math.atan2(frontRise, frontRun);
+  const frontPanelLength = Math.hypot(frontRun, frontRise);
+  const ribPositions = Array.from({ length: ribCount }, (_, index) => {
+    if (ribCount === 1) {
+      return 0;
+    }
+
+    return -0.44 + (0.88 * index) / (ribCount - 1);
+  });
+
+  return (
+    <group>
+      <mesh
+        position={[
+          xCenter,
+          wallHeight + frontRise / 2,
+          (frontEaveZ + ridgeZ) / 2,
+        ]}
+        rotation={[-frontSlope, 0, 0]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry args={[width, 0.36, frontPanelLength]} />
+        <meshStandardMaterial color={roofColor} roughness={0.4} />
+      </mesh>
+      {ribPositions.map((fraction) => (
+        <mesh
+          key={fraction}
+          position={[
+            xCenter + width * fraction,
+            wallHeight + frontRise / 2 + 0.2,
+            (frontEaveZ + ridgeZ) / 2,
+          ]}
+          rotation={[-frontSlope, 0, 0]}
+          castShadow
+        >
+          <boxGeometry args={[0.15, 0.2, frontPanelLength + 0.18]} />
+          <meshStandardMaterial color={ridgeColor} roughness={0.32} />
+        </mesh>
+      ))}
+      <mesh
+        position={[xCenter, wallHeight + frontRise + 0.13, ridgeZ]}
+        rotation={[0, 0, Math.PI / 2]}
+        castShadow
+      >
+        <cylinderGeometry args={[0.18, 0.18, width + 0.3, 16]} />
+        <meshStandardMaterial color={ridgeColor} roughness={0.28} />
+      </mesh>
+      <mesh position={[xCenter, wallHeight + 0.1, frontEaveZ]} castShadow>
+        <boxGeometry args={[width, 0.32, 0.3]} />
+        <meshStandardMaterial color={ridgeColor} roughness={0.35} />
+      </mesh>
+    </group>
+  );
+}
+
+function RightArcCavettoBand({
+  span,
+  springY,
+  apexY,
+  shoulderX,
+  shoulderY,
+  depth,
+  position,
+  color,
+}) {
+  const lift = 0.12;
+  const drop = 0.44;
+  const shape = new THREE.Shape();
+
+  shape.moveTo(-span / 2, springY + lift);
+  shape.quadraticCurveTo(-shoulderX, shoulderY + lift, 0, apexY + lift);
+  shape.quadraticCurveTo(shoulderX, shoulderY + lift, span / 2, springY + lift);
+  shape.lineTo(span / 2, springY - drop);
+  shape.quadraticCurveTo(shoulderX, shoulderY - drop, 0, apexY - drop);
+  shape.quadraticCurveTo(-shoulderX, shoulderY - drop, -span / 2, springY - drop);
+  shape.lineTo(-span / 2, springY + lift);
+
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth,
+    bevelEnabled: false,
+    curveSegments: 16,
+  });
+
+  return (
+    <mesh
+      geometry={geometry}
+      position={position}
+      rotation={[0, Math.PI / 2, 0]}
+      castShadow
+      receiveShadow
+    >
+      <meshStandardMaterial
+        color={color}
+        roughness={0.42}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+}
+
+function RightArcOvalTrim({ width, height, thickness, depth, position, color }) {
+  const outer = new THREE.Shape();
+  const inner = new THREE.Path();
+  const innerWidth = Math.max(0.1, width - thickness * 2);
+  const innerHeight = Math.max(0.1, height - thickness * 2);
+
+  outer.absellipse(0, 0, width / 2, height / 2, 0, Math.PI * 2, false);
+  inner.absellipse(
+    0,
+    0,
+    innerWidth / 2,
+    innerHeight / 2,
+    0,
+    Math.PI * 2,
+    true,
+  );
+  outer.holes.push(inner);
+
+  const geometry = new THREE.ExtrudeGeometry(outer, {
+    depth,
+    bevelEnabled: false,
+    curveSegments: 32,
+  });
+
+  return (
+    <mesh
+      geometry={geometry}
+      position={position}
+      rotation={[0, Math.PI / 2, 0]}
+      castShadow
+      receiveShadow
+    >
+      <meshStandardMaterial
+        color={color}
+        roughness={0.42}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+}
+
+function RightArcFacade({
+  rightX,
+  wallHeight,
+  span,
+  color,
+  trimColor = color,
+  columnDepth = 3.15,
+}) {
+  const springY = wallHeight + 3.15;
+  const archRise = 3.8;
+  const apexY = springY + archRise;
+  const archShoulderX = span * 0.18;
+  const archShoulderY = springY + archRise * 0.97;
+  const columnHeight = wallHeight + 3.2;
+  const facadeLeftReach = 1.3;
+  const facadeFaceX = rightX - 0.14;
+  const archTrimThickness = 0.44;
+  const arcOvalCenterY = wallHeight + (apexY - wallHeight) * 0.54;
+  const facadeWallWidth = 0.58 + facadeLeftReach;
+  const facadeWallRightX = rightX + 0.15;
+  const trimDepth = facadeLeftReach + 0.34;
+  const columnBaseWidth = 1.28;
+  const columnWidth = columnBaseWidth + facadeLeftReach;
+  const columnRightX = rightX + 0.2 + columnBaseWidth / 2;
+  const columnCenterX = columnRightX - columnWidth / 2;
+  const shape = new THREE.Shape();
+
+  shape.moveTo(-span / 2, wallHeight);
+  shape.lineTo(-span / 2, springY);
+  shape.quadraticCurveTo(-archShoulderX, archShoulderY, 0, apexY);
+  shape.quadraticCurveTo(
+    archShoulderX,
+    archShoulderY,
+    span / 2,
+    springY,
+  );
+  shape.lineTo(span / 2, wallHeight);
+  shape.lineTo(-span / 2, wallHeight);
+
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: facadeLeftReach,
+    bevelEnabled: false,
+  });
+
+  return (
+    <group>
+      <mesh
+        position={[
+          facadeWallRightX - facadeWallWidth / 2,
+          wallHeight / 2,
+          0,
+        ]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry args={[facadeWallWidth, wallHeight, span + columnDepth]} />
+        <meshStandardMaterial color={color} roughness={0.54} />
+      </mesh>
+      <mesh
+        geometry={geometry}
+        position={[facadeFaceX - facadeLeftReach, 0, 0]}
+        rotation={[0, Math.PI / 2, 0]}
+        castShadow
+        receiveShadow
+      >
+        <meshStandardMaterial
+          color={color}
+          roughness={0.54}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      <RightArcCavettoBand
+        span={span}
+        springY={springY}
+        apexY={apexY}
+        shoulderX={archShoulderX}
+        shoulderY={archShoulderY}
+        depth={trimDepth}
+        position={[facadeFaceX - facadeLeftReach - 0.04, 0, 0]}
+        color={trimColor}
+      />
+      <RightArcOvalTrim
+        width={span * 0.31875}
+        height={3.1875}
+        thickness={archTrimThickness}
+        depth={0.3}
+        position={[facadeFaceX + 0.08, arcOvalCenterY, 0]}
+        color={trimColor}
+      />
+      {[-1, 1].map((direction) => (
+        <group key={direction}>
+          <mesh
+            position={[
+              columnCenterX,
+              columnHeight / 2,
+              direction * (span / 2),
+            ]}
+            castShadow
+            receiveShadow
+          >
+            <boxGeometry args={[columnWidth, columnHeight, columnDepth]} />
+            <meshStandardMaterial color={color} roughness={0.54} />
+          </mesh>
+          <PillarCavettoCap
+            centerX={columnCenterX}
+            centerZ={direction * (span / 2)}
+            topY={columnHeight}
+            width={columnWidth}
+            depth={columnDepth}
+            color={trimColor}
+          />
+        </group>
+      ))}
+    </group>
+  );
+}
+
+function LeftSlantedDoorCanopy({
+  wallX,
+  centerZ,
+  doorWidth,
+  canopyWidth,
+  attachY,
+  projection = 9.2,
+  drop = 1.25,
+  roofThickness = 0.34,
+  color,
+  poleColor,
+}) {
+  const resolvedCanopyWidth = canopyWidth ?? doorWidth + 1.25;
+  const slopeLength = Math.hypot(projection, drop);
+  const slope = Math.atan2(drop, projection);
+  const lowEdgeY = attachY - drop;
+  const poleHeight = Math.max(0.1, lowEdgeY - roofThickness / 2);
+  const poleX = wallX - projection + 0.18;
+  const poleRadius = 0.375;
+  const poleZOffset = resolvedCanopyWidth / 2 - 0.52;
+  const sideShape = new THREE.Shape();
+
+  sideShape.moveTo(0, 0);
+  sideShape.lineTo(0, -drop);
+  sideShape.lineTo(-projection, -drop);
+  sideShape.lineTo(0, 0);
+
+  const sideGeometry = new THREE.ShapeGeometry(sideShape);
+
+  return (
+    <group>
+      <mesh
+        position={[wallX - projection / 2, attachY - drop / 2, centerZ]}
+        rotation={[0, 0, slope]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry args={[slopeLength, roofThickness, resolvedCanopyWidth]} />
+        <meshStandardMaterial color={color} roughness={0.42} />
+      </mesh>
+      {[-1, 1].map((direction) => (
+        <mesh
+          key={direction}
+          position={[poleX, poleHeight / 2, centerZ + direction * poleZOffset]}
+          castShadow
+          receiveShadow
+        >
+          <cylinderGeometry args={[poleRadius, poleRadius, poleHeight, 24]} />
+          <meshStandardMaterial color={poleColor} roughness={0.38} />
+        </mesh>
+      ))}
+      {[-1, 1].map((direction) => (
+        <mesh
+          key={`side-fill-${direction}`}
+          geometry={sideGeometry}
+          position={[
+            wallX,
+            attachY,
+            centerZ + direction * (resolvedCanopyWidth / 2),
+          ]}
+          castShadow
+          receiveShadow
+        >
+          <meshStandardMaterial
+            color={color}
+            roughness={0.44}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function CantileverPayCanopy({
+  position,
+  rotation = [0, 0, 0],
+  width = 4.2,
+  length = 4.3,
+  roofY = 4.25,
+  roofThickness = 0.32,
+  curveRise = 0.55,
+  supportSide = 1,
+  roofColor,
+  poleColor,
+  terminalColor = roofColor,
+}) {
+  const halfWidth = width / 2;
+  const halfLength = length / 2;
+  const poleRadius = 0.18;
+  const supportX = supportSide * (halfWidth - 0.42);
+  const poleHeight = roofY - roofThickness * 0.75;
+  const poleZOffset = halfLength - 0.7;
+  const terminalHeight = 1.95;
+  const terminalDepth = 0.74;
+  const terminalWidth = 0.62;
+  const terminalX = supportX - supportSide * 0.08;
+  const screenX = terminalX - supportSide * (terminalDepth / 2 + 0.03);
+  const roofShape = new THREE.Shape();
+
+  roofShape.moveTo(-halfWidth, 0);
+  roofShape.quadraticCurveTo(0, curveRise, halfWidth, 0);
+  roofShape.lineTo(halfWidth, -roofThickness);
+  roofShape.quadraticCurveTo(
+    0,
+    curveRise - roofThickness * 0.72,
+    -halfWidth,
+    -roofThickness,
+  );
+  roofShape.lineTo(-halfWidth, 0);
+
+  const roofGeometry = new THREE.ExtrudeGeometry(roofShape, {
+    depth: length,
+    bevelEnabled: false,
+    curveSegments: 18,
+  });
+  roofGeometry.translate(0, 0, -halfLength);
+
+  return (
+    <group position={position} rotation={rotation}>
+      <mesh
+        geometry={roofGeometry}
+        position={[0, roofY, 0]}
+        castShadow
+        receiveShadow
+      >
+        <meshStandardMaterial color={roofColor} roughness={0.43} />
+      </mesh>
+      {[-1, 1].map((direction) => (
+        <mesh
+          key={direction}
+          position={[
+            supportX,
+            poleHeight / 2,
+            direction * poleZOffset,
+          ]}
+          castShadow
+          receiveShadow
+        >
+          <cylinderGeometry args={[poleRadius, poleRadius, poleHeight, 24]} />
+          <meshStandardMaterial color={poleColor} roughness={0.36} />
+        </mesh>
+      ))}
+      <group position={[terminalX, 0, 0]}>
+        <mesh
+          position={[0, terminalHeight / 2, 0]}
+          castShadow
+          receiveShadow
+        >
+          <boxGeometry args={[terminalDepth, terminalHeight, terminalWidth]} />
+          <meshStandardMaterial color={terminalColor} roughness={0.48} />
+        </mesh>
+        <mesh
+          position={[
+            screenX - terminalX,
+            terminalHeight * 0.68,
+            0,
+          ]}
+          castShadow
+        >
+          <boxGeometry args={[0.06, 0.58, 0.34]} />
+          <meshStandardMaterial
+            color="#111827"
+            emissive="#1d4ed8"
+            emissiveIntensity={0.2}
+            roughness={0.22}
+          />
+        </mesh>
+        <mesh
+          position={[
+            screenX - terminalX,
+            terminalHeight * 0.34,
+            0,
+          ]}
+          castShadow
+        >
+          <boxGeometry args={[0.07, 0.22, 0.28]} />
+          <meshStandardMaterial color="#d1d5db" roughness={0.3} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+function ChattanoogaPayCanopies({
+  position,
+  rotation = [0, 0, 0],
+  canopyLength,
+  roofY,
+  supportSide = 1,
+  roofColor,
+  poleColor,
+  terminalColor,
+}) {
+  const laneOffset = 2.75;
+
+  return (
+    <group position={position} rotation={rotation}>
+      {[-laneOffset, laneOffset].map((offset) => (
+        <CantileverPayCanopy
+          key={offset}
+          position={[offset, 0, 0]}
+          length={canopyLength}
+          roofY={roofY}
+          supportSide={supportSide}
+          roofColor={roofColor}
+          poleColor={poleColor}
+          terminalColor={terminalColor}
+        />
+      ))}
+    </group>
+  );
+}
+
+function ChattanoogaBuilding({ colors }) {
+  const width = 34;
+  const archSpan = 20.2;
+  const archColumnDepth = 3.15;
+  const mainFrontZ = -archSpan / 2 - archColumnDepth / 2 + 0.45;
+  const mainBackZ = 15;
+  const depth = mainBackZ - mainFrontZ;
+  const bodyCenterZ = (mainFrontZ + mainBackZ) / 2;
+  const wallHeight = 6.55;
+  const leftExtensionWidth = 12;
+  const leftExtensionFrontBump = 4.45;
+  const roofRightClearance = 2.5;
+  const frontRoofRise = 4.85;
+  const rearRoofRise = 5.85;
+  const rearRoofOverhang = 1.25;
+  const leftCascadeStepWidth = 3.25;
+  const leftTriangleInfillInset = 0.05;
+  const roofWidth = width + leftExtensionWidth - roofRightClearance;
+  const roofDepth = depth;
+  const roofCenterX = -leftExtensionWidth / 2 - roofRightClearance / 2;
+  const roofCenterZ = bodyCenterZ;
+  const roofFrontEaveZ = mainFrontZ - 0.45;
+  const roofRightEdgeX =
+    roofCenterX + roofWidth / 2 + Math.max(0.45, rearRoofOverhang);
+  const rearRoofEaveLocalZ = roofDepth / 2 + rearRoofOverhang;
+  const rearRoofEaveZ = roofCenterZ + rearRoofEaveLocalZ;
+  const leftExtensionLeftX = -width / 2 - leftExtensionWidth;
+  const leftFrontStepLeftX = leftExtensionLeftX - leftCascadeStepWidth;
+  const leftRearStepLeftX = leftFrontStepLeftX - leftCascadeStepWidth;
+  const leftFrontStepCenterX = (leftFrontStepLeftX + leftExtensionLeftX) / 2;
+  const leftRearStepCenterX = (leftRearStepLeftX + leftExtensionLeftX) / 2;
+  const leftRearVisibleFrontCenterX =
+    (leftRearStepLeftX + leftFrontStepLeftX) / 2;
+  const leftFrontStepDepth = roofCenterZ - mainFrontZ;
+  const leftFrontStepCenterZ = (mainFrontZ + roofCenterZ) / 2;
+  const leftRearStepDepth = mainBackZ - roofCenterZ;
+  const leftRearStepCenterZ = (roofCenterZ + mainBackZ) / 2;
+  const leftRoofExtensionOverhang = 0.65;
+  const leftFrontRoofExtensionWidth =
+    leftCascadeStepWidth + leftRoofExtensionOverhang;
+  const leftFrontRoofExtensionCenterX =
+    leftFrontStepCenterX - leftRoofExtensionOverhang / 4;
+  const leftRearRoofWidth = leftExtensionLeftX - leftRearStepLeftX + 0.65;
+  const leftRearRoofCenterX =
+    (leftRearStepLeftX + leftExtensionLeftX) / 2 - 0.18;
+  const leftRearUpperFillZ = roofCenterZ - 0.08;
+  const leftExtensionCenterX = -width / 2 - leftExtensionWidth / 2;
+  const leftExtensionFrontFaceZ = mainFrontZ - leftExtensionFrontBump;
+  const leftExtensionCenterZ = (leftExtensionFrontFaceZ + mainBackZ) / 2;
+  const leftExtensionDepth = mainBackZ - leftExtensionFrontFaceZ;
+  const leftExtensionFrontZ = leftExtensionFrontFaceZ - 0.04;
+  const leftExtensionReturnZ = (leftExtensionFrontFaceZ + mainFrontZ) / 2;
+  const leftFacingRotation = [0, Math.PI / 2, 0];
+  const leftWindowSurfaceX = leftExtensionLeftX - 0.04;
+  const leftSmallDoorSurfaceX = leftFrontStepLeftX - 0.06;
+  const leftLargeDoorSurfaceX = leftRearStepLeftX - 0.08;
+  const leftProtrusionSideWindowZ = leftExtensionReturnZ;
+  const leftFrontStepDoorZ = roofCenterZ - 3.15;
+  const leftRearLargeDoorZ = leftRearStepCenterZ;
+  const payCanopyPairZ = leftExtensionFrontFaceZ - 6.4;
+  const standardWindowBaseY = 2.25;
+  const standardWindowHeight = 2.65;
+  const standardWindowTopY = standardWindowBaseY + standardWindowHeight;
+  const leftRearCanopyWallX = leftRearStepLeftX - 0.05;
+  const leftRearCanopyAttachY = wallHeight + 0.42;
+  const leftRearCanopyProjection = 9.2;
+  const leftRearCanopyDrop = 1.25;
+  const leftRearCanopyLowEdgeY = leftRearCanopyAttachY - leftRearCanopyDrop;
+  const leftRearCanopyPoleX =
+    leftRearCanopyWallX - leftRearCanopyProjection + 0.18;
+  const leftRearCanopyWidth = leftRearStepDepth - 1.05;
+  const payCanopyLength = 4.3;
+  const payCanopyPairX = leftRearCanopyPoleX + payCanopyLength / 2;
+  const rightFaceX = width / 2 + 0.17;
+  const rightLargeDoorX = rightFaceX + 0.14;
+  const rightSmallDoorX = rightFaceX - 0.18;
+  const mainFrontWindowXs = [-10, -0.85, 8.3];
+  const protrusionWindowOffsets = [-0.6, 3.3];
+  const frontStripeHeight = 2.02;
+  const frontStripeZ = mainFrontZ - 0.25;
+  const rightDoorGap = 2.2;
+  const rightPillarInnerZ = archSpan / 2 - archColumnDepth / 2;
+  const rightDoorWidth = rightPillarInnerZ - rightDoorGap / 2;
+  const rightDoorCenterZ = rightDoorGap / 2 + rightDoorWidth / 2;
+  const rearPillarBackZ = archSpan / 2 + archColumnDepth / 2;
+  const rearPillarBackLocalZ = rearPillarBackZ - roofCenterZ;
+  const rearRoofHeightAtPillar =
+    wallHeight +
+    rearRoofRise * (1 - rearPillarBackLocalZ / rearRoofEaveLocalZ);
+
+  return (
+    <group>
+      <mesh position={[0, wallHeight / 2, bodyCenterZ]} castShadow receiveShadow>
+        <boxGeometry args={[width, wallHeight, depth]} />
+        <meshStandardMaterial
+          color={colors.buildingWallsColor}
+          roughness={0.54}
+        />
+      </mesh>
+      <mesh
+        position={[leftExtensionCenterX, wallHeight / 2, leftExtensionCenterZ]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry args={[leftExtensionWidth, wallHeight, leftExtensionDepth]} />
+        <meshStandardMaterial
+          color={colors.buildingWallsColor}
+          roughness={0.54}
+        />
+      </mesh>
+      <mesh
+        position={[
+          leftFrontStepCenterX,
+          wallHeight / 2,
+          leftFrontStepCenterZ,
+        ]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry
+          args={[leftCascadeStepWidth, wallHeight, leftFrontStepDepth]}
+        />
+        <meshStandardMaterial
+          color={colors.buildingWallsColor}
+          roughness={0.54}
+        />
+      </mesh>
+      <mesh
+        position={[leftRearStepCenterX, wallHeight / 2, leftRearStepCenterZ]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry
+          args={[
+            leftExtensionLeftX - leftRearStepLeftX,
+            wallHeight,
+            leftRearStepDepth,
+          ]}
+        />
+        <meshStandardMaterial
+          color={colors.buildingWallsColor}
+          roughness={0.54}
+        />
+      </mesh>
+      <mesh
+        position={[
+          leftRearVisibleFrontCenterX,
+          wallHeight / 2,
+          roofCenterZ - 0.07,
+        ]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry args={[leftCascadeStepWidth, wallHeight, 0.14]} />
+        <meshStandardMaterial
+          color={colors.buildingWallsColor}
+          roughness={0.54}
+        />
+      </mesh>
+      <mesh
+        position={[
+          leftRearVisibleFrontCenterX,
+          wallHeight + frontRoofRise / 2,
+          leftRearUpperFillZ,
+        ]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry args={[leftCascadeStepWidth, frontRoofRise, 0.14]} />
+        <meshStandardMaterial
+          color={colors.buildingWallsColor}
+          roughness={0.54}
+        />
+      </mesh>
+      <mesh
+        position={[-width / 2 + 0.08, wallHeight / 2, leftExtensionReturnZ]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry args={[0.16, wallHeight, leftExtensionFrontBump]} />
+        <meshStandardMaterial
+          color={colors.buildingWallsColor}
+          roughness={0.54}
+        />
+      </mesh>
+      <group position={[roofCenterX, 0, roofCenterZ]}>
+        <ChattanoogaOffsetRoof
+          width={roofWidth}
+          depth={roofDepth}
+          wallHeight={wallHeight}
+          frontRise={frontRoofRise}
+          backRise={rearRoofRise}
+          roofColor={colors.roofColor}
+          ridgeColor={colors.roofRidgeColor}
+          wallColor={colors.buildingWallsColor}
+          frontOverhang={0.45}
+          backOverhang={rearRoofOverhang}
+          ribCount={40}
+          showLeftEnd={false}
+          ridgeGapLeftInset={0.9}
+        />
+      </group>
+      <ChattanoogaFrontRoofExtension
+        xCenter={leftFrontRoofExtensionCenterX}
+        width={leftFrontRoofExtensionWidth}
+        roofCenterZ={roofCenterZ}
+        roofDepth={roofDepth}
+        wallHeight={wallHeight}
+        frontRise={frontRoofRise}
+        frontOverhang={0.45}
+        roofColor={colors.roofColor}
+        ridgeColor={colors.roofRidgeColor}
+        ribCount={6}
+      />
+      <ChattanoogaRearRoofExtension
+        xCenter={leftRearRoofCenterX}
+        width={leftRearRoofWidth}
+        roofCenterZ={roofCenterZ}
+        roofDepth={roofDepth}
+        wallHeight={wallHeight}
+        frontRise={frontRoofRise}
+        backRise={rearRoofRise}
+        backOverhang={rearRoofOverhang}
+        roofColor={colors.roofColor}
+        ridgeColor={colors.roofRidgeColor}
+        wallColor={colors.buildingWallsColor}
+        ribCount={6}
+        ridgeGapLeftInset={0.42}
+      />
+      <LeftRoofTriangleInfill
+        x={leftFrontStepLeftX + leftTriangleInfillInset}
+        points={[
+          [roofFrontEaveZ, wallHeight],
+          [roofCenterZ, wallHeight + frontRoofRise],
+          [roofCenterZ, wallHeight],
+        ]}
+        color={colors.buildingWallsColor}
+      />
+      <LeftRoofTriangleInfill
+        x={leftRearStepLeftX + leftTriangleInfillInset}
+        points={[
+          [roofCenterZ, wallHeight],
+          [roofCenterZ, wallHeight + rearRoofRise],
+          [rearRoofEaveZ, wallHeight],
+        ]}
+        color={colors.buildingWallsColor}
+      />
+      <RightSideRearRoofInfill
+        x={roofRightEdgeX + 0.04}
+        wallHeight={wallHeight}
+        startZ={rearPillarBackZ}
+        endZ={rearRoofEaveZ}
+        roofHeightAtStart={rearRoofHeightAtPillar}
+        color={colors.buildingWallsColor}
+      />
+      <FrontGableRoof
+        width={leftExtensionWidth}
+        depth={leftExtensionFrontBump}
+        wallHeight={wallHeight}
+        rise={2.45}
+        position={[leftExtensionCenterX, 0, leftExtensionReturnZ + 0.12]}
+        roofColor={colors.roofColor}
+        ridgeColor={colors.roofRidgeColor}
+        gableColor={colors.buildingWallsColor}
+        ribCount={10}
+        overhang={0.28}
+        showFrontEave={false}
+      />
+      {protrusionWindowOffsets.map((offset) => (
+        <PlainWindow
+          key={offset}
+          width={2.65}
+          height={standardWindowHeight}
+          position={[
+            leftExtensionCenterX + offset,
+            standardWindowBaseY,
+            leftExtensionFrontZ,
+          ]}
+          trimColor={colors.windowTrimColor}
+          windowColor={colors.windowColor}
+        />
+      ))}
+      <PlainWindow
+        width={2.4}
+        height={standardWindowHeight}
+        position={[
+          leftWindowSurfaceX,
+          standardWindowBaseY,
+          leftProtrusionSideWindowZ,
+        ]}
+        rotation={leftFacingRotation}
+        trimColor={colors.windowTrimColor}
+        windowColor={colors.windowColor}
+      />
+      <ServiceDoor
+        width={1.9}
+        height={standardWindowTopY}
+        position={[
+          leftSmallDoorSurfaceX,
+          0,
+          leftFrontStepDoorZ,
+        ]}
+        rotation={leftFacingRotation}
+        color={colors.buildingDoorColor}
+      />
+      <SideCarDoor
+        side="left"
+        width={rightDoorWidth}
+        height={wallHeight}
+        position={[
+          leftLargeDoorSurfaceX,
+          0,
+          leftRearLargeDoorZ,
+        ]}
+        color={colors.buildingDoorColor}
+      />
+      <LeftSlantedDoorCanopy
+        wallX={leftRearCanopyWallX}
+        centerZ={leftRearLargeDoorZ}
+        doorWidth={rightDoorWidth}
+        canopyWidth={leftRearCanopyWidth}
+        attachY={leftRearCanopyAttachY}
+        projection={leftRearCanopyProjection}
+        drop={leftRearCanopyDrop}
+        color={colors.roofColor}
+        poleColor={colors.roofRidgeColor}
+      />
+      <ChattanoogaPayCanopies
+        position={[payCanopyPairX, 0, payCanopyPairZ]}
+        rotation={[0, Math.PI / 2, 0]}
+        canopyLength={payCanopyLength}
+        roofY={leftRearCanopyLowEdgeY}
+        supportSide={-1}
+        roofColor={colors.payCanopyRoofColor}
+        poleColor={colors.payCanopyPoleColor}
+        terminalColor={colors.payTerminalColor}
+      />
+      <mesh
+        position={[0, frontStripeHeight / 2, frontStripeZ]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry args={[width, frontStripeHeight, 0.12]} />
+        <meshStandardMaterial
+          color={colors.buildingDoorColor}
+          roughness={0.48}
+        />
+      </mesh>
+      {mainFrontWindowXs.map((x) => (
+        <PlainWindow
+          key={x}
+          width={2.65}
+          height={standardWindowHeight}
+          position={[x, standardWindowBaseY, mainFrontZ - 0.18]}
+          trimColor={colors.windowTrimColor}
+          windowColor={colors.windowColor}
+        />
+      ))}
+      <DoubleServiceDoor
+        width={3.25}
+        height={standardWindowTopY}
+        position={[-width / 2 + 0.18, 0, leftExtensionReturnZ]}
+        rotation={[0, -Math.PI / 2, 0]}
+        color={colors.buildingDoorColor}
+      />
+      {[-rightDoorCenterZ, rightDoorCenterZ].map((z) => (
+        <SideCarDoor
+          key={z}
+          side="right"
+          width={rightDoorWidth}
+          height={wallHeight}
+          position={[rightLargeDoorX, 0, z]}
+          color={colors.buildingDoorColor}
+        />
+      ))}
+      <ServiceDoor
+        width={1.55}
+        height={standardWindowTopY}
+        position={[rightSmallDoorX, 0, 13.25]}
+        rotation={[0, -Math.PI / 2, 0]}
+        color={colors.buildingDoorColor}
+      />
+      <PlainWindow
+        width={2.65}
+        height={standardWindowHeight}
+        position={[14.35, standardWindowBaseY, mainBackZ + 0.04]}
+        rotation={[0, Math.PI, 0]}
+        trimColor={colors.windowTrimColor}
+        windowColor={colors.windowColor}
+      />
+      <RightArcFacade
+        rightX={rightFaceX}
+        wallHeight={wallHeight}
+        span={archSpan}
+        color={colors.buildingWallsColor}
+        trimColor={colors.arcTrimColor}
+        columnDepth={archColumnDepth}
+      />
+      <SideDebugLabels
+        siteName="Chattanooga"
+        width={roofWidth}
+        depth={leftExtensionDepth}
+        labelHeight={wallHeight + 7.2}
+      />
+    </group>
+  );
+}
+
+function ChattanoogaSite({ position, rotation = [0, 0, 0], colors }) {
+  const depth = 30;
+
+  return (
+    <group position={position} rotation={rotation}>
+      <ChattanoogaBuilding colors={colors} />
+      <SiteBillboard
+        label="Chattanooga"
+        position={[0, 0, -depth / 2 - 13]}
+      />
+    </group>
+  );
+}
+
 function BaseBuilding({
   siteName,
   width,
@@ -741,7 +2181,7 @@ function BaseBuilding({
   rightGableExtensionWidth = 0,
   hasSideCarDoors = false,
   hasCentralDoorGable = false,
-  roofRibCount = 6,
+  roofRibCount = 12,
 }) {
   const frontZ = -depth / 2 - 0.09;
   const backZ = depth / 2 + 0.09;
@@ -871,7 +2311,7 @@ function BaseBuilding({
           roofColor={roofColor}
           ridgeColor={roofRidgeColor}
           gableColor={wallColor}
-          ribCount={5}
+          ribCount={10}
         />
       ) : null}
       {rightGableExtensionWidth > 0 ? (
@@ -1050,7 +2490,7 @@ function SiteStructure({
   rightGableExtensionWidth = 0,
   hasSideCarDoors = false,
   hasCentralDoorGable = false,
-  roofRibCount = 6,
+  roofRibCount = 12,
   signForwardOffset = 19,
   canopyForwardOffset = 12,
   vacuumCanopyWidth = 22,
@@ -1139,19 +2579,24 @@ function SiteStructure({
 
 export default function ShowcaseScene() {
   const GROUND_Y = 0;
-  const PLAZA_WIDTH = 200;
-  const PLAZA_DEPTH = 200;
+  const PLAZA_WIDTH = 140;
+  const PLAZA_DEPTH = 172;
+  const PLAZA_CENTER = [-40, GROUND_Y - 0.01, -32];
 
   const ooltewahColors = useControls(
     "Ooltewah Colors",
     OOLTEWAH_COLOR_CONTROLS,
+  );
+  const chattanoogaColors = useControls(
+    "Chattanooga Colors",
+    CHATTANOOGA_COLOR_CONTROLS,
   );
 
   return (
     <>
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, GROUND_Y - 0.01, 0]}
+        position={PLAZA_CENTER}
         receiveShadow
       >
         <planeGeometry args={[PLAZA_WIDTH, PLAZA_DEPTH]} />
@@ -1171,7 +2616,7 @@ export default function ShowcaseScene() {
         hasSideCarDoors
         hasCentralDoorGable
         roofRidgeAxis="x"
-        roofRibCount={24}
+        roofRibCount={48}
         frontWindowPanelCount={6}
         leftExtensionWidth={12}
         leftExtensionFrontBump={4}
@@ -1196,6 +2641,11 @@ export default function ShowcaseScene() {
         colors={ooltewahColors}
       />
 
+      <ChattanoogaSite
+        position={[-38, GROUND_Y, -92]}
+        rotation={[0, Math.PI, 0]}
+        colors={chattanoogaColors}
+      />
     </>
   );
 }
