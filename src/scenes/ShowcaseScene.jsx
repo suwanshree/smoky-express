@@ -5,42 +5,27 @@ import { useControls } from "leva";
 
 const SHOW_BUILDING_SIDE_LABELS = false;
 const OOLTEWAH_COLOR_CONTROLS = {
-  pillarColor: { value: "#c73f34", label: "Pillars" },
-  canopySideColor: { value: "#2f6fb7", label: "Canopy Side" },
-  canopyTopColor: { value: "#c49368", label: "Canopy Bot" },
-  buildingWallsColor: { value: "#c49368", label: "Walls" },
-  buildingStripeColor: { value: "#c73f34", label: "Building Stripe" },
-  buildingDoorColor: { value: "#c73f34", label: "Door" },
-  roofColor: { value: "#2f6fb7", label: "Roof" },
-  roofRidgeColor: { value: "#2f6fb7", label: "Ridges on Roof" },
-  windowColor: { value: "#2f4f5f", label: "Windows" },
-  windowTrimColor: { value: "#c73f34", label: "Window Trim" },
-  carwashTextColor: { value: "#c73f34", label: "CARWASH Text" },
+  pillarColor: { value: "#000000", label: "Pillars" },
+  canopySideColor: { value: "#ed2024", label: "Canopy Top + Side" },
+  canopyTopColor: { value: "#000000", label: "Canopy Underside" },
+  buildingWallsColor: { value: "#ed2024", label: "Walls" },
+  buildingStripeColor: { value: "#000000", label: "Building Stripe" },
+  buildingDoorColor: { value: "#000000", label: "Door" },
+  roofColor: { value: "#000000", label: "Roof" },
+  roofRidgeColor: { value: "#000000", label: "Ridges / Gutters" },
+  windowColor: { value: "#2a2a2a", label: "Windows" },
+  windowTrimColor: { value: "#000000", label: "Window Trim" },
+  carwashTextColor: { value: "#000000", label: "CARWASH Text" },
 };
 
-// Chattanooga controls are parked while that site is represented as
-// an in-development placeholder for the owner review build.
-// const CHATTANOOGA_COLOR_CONTROLS = {
-//   pillarColor: { value: "#ffffff", label: "Pillars" },
-//   canopySideColor: { value: "#facc15", label: "Canopy Side" },
-//   canopyTopColor: { value: "#ffffff", label: "Canopy Bot" },
-//   buildingWallsColor: { value: "#ffffff", label: "Walls" },
-//   buildingDoorColor: { value: "#68340f", label: "Door" },
-//   roofColor: { value: "#d7dce2", label: "Roof" },
-//   roofRidgeColor: { value: "#f8fafc", label: "Ridges on Roof" },
-//   windowColor: { value: "#9ad7ee", label: "Windows" },
-//   windowTrimColor: { value: "#f8fafc", label: "Window Trim" },
-// };
-
 /*
-  Site orientation map for both buildings:
+  Site orientation map:
   Side 1: front, facing -Z toward the initial camera
   Side 2: right, facing +X
   Side 3: back, facing +Z
   Side 4: left, facing -X
 
-  Keep this map stable so later requests like "Chattanooga side 1"
-  have a clear target.
+  Keep this map stable so later site-specific edits have a clear target.
 */
 
 function RoundedCanopy({
@@ -629,8 +614,8 @@ function BuildingStripe({
   leftExtensionFrontBump = 0,
   color,
 }) {
-  const stripeHeight = 1.05;
-  const stripeY = wallHeight - 1.45;
+  const stripeHeight = 2.2;
+  const stripeY = wallHeight - 4.35;
   const faceThickness = 0.14;
   const faceOffset = 0.1;
   const leftExtensionDepth = depth + leftExtensionFrontBump;
@@ -747,6 +732,7 @@ function BaseBuilding({
   windowTrimColor,
   stripeColor,
   carwashTextColor,
+  soffitColor = roofColor,
   hasOoltewahFront,
   roofRidgeAxis = "z",
   frontWindowPanelCount,
@@ -902,7 +888,7 @@ function BaseBuilding({
             <boxGeometry
               args={[rightGableSoffitWidth, 0.34, depth - 0.95]}
             />
-            <meshStandardMaterial color={wallColor} roughness={0.54} />
+            <meshStandardMaterial color={soffitColor} roughness={0.54} />
           </mesh>
           {[-1, 1].map((direction) => (
             <mesh
@@ -916,7 +902,7 @@ function BaseBuilding({
               receiveShadow
             >
               <boxGeometry args={[0.85, wallHeight, 0.85]} />
-              <meshStandardMaterial color={wallColor} roughness={0.54} />
+              <meshStandardMaterial color={soffitColor} roughness={0.54} />
             </mesh>
           ))}
           <CanvasLabel
@@ -1151,60 +1137,6 @@ function SiteStructure({
   );
 }
 
-function InDevelopmentBlock({ position }) {
-  const size = 30;
-  const height = 9.5;
-  const labelInset = 0.08;
-  const labelWidth = 20.5;
-  const labelHeight = 4.8;
-  const labelText = "IN\nDEVELOPMENT";
-  const faces = [
-    {
-      key: "front",
-      position: [0, height * 0.55, -size / 2 - labelInset],
-      rotation: [0, Math.PI, 0],
-    },
-    {
-      key: "back",
-      position: [0, height * 0.55, size / 2 + labelInset],
-      rotation: [0, 0, 0],
-    },
-    {
-      key: "right",
-      position: [size / 2 + labelInset, height * 0.55, 0],
-      rotation: [0, Math.PI / 2, 0],
-    },
-    {
-      key: "left",
-      position: [-size / 2 - labelInset, height * 0.55, 0],
-      rotation: [0, -Math.PI / 2, 0],
-    },
-  ];
-
-  return (
-    <group position={position}>
-      <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
-        <boxGeometry args={[size, height, size]} />
-        <meshStandardMaterial color="#f8fafc" roughness={0.62} />
-      </mesh>
-      {faces.map((face) => (
-        <CanvasLabel
-          key={face.key}
-          text={labelText}
-          width={labelWidth}
-          height={labelHeight}
-          position={face.position}
-          rotation={face.rotation}
-          background="#f8fafc"
-          foreground="#c73f34"
-          fontSize={106}
-          fontWeight={800}
-        />
-      ))}
-    </group>
-  );
-}
-
 export default function ShowcaseScene() {
   const GROUND_Y = 0;
   const PLAZA_WIDTH = 200;
@@ -1214,11 +1146,6 @@ export default function ShowcaseScene() {
     "Ooltewah Colors",
     OOLTEWAH_COLOR_CONTROLS,
   );
-  // Chattanooga color controls are disabled while the site is parked.
-  // const chattanoogaColors = useControls(
-  //   "Chattanooga Colors",
-  //   CHATTANOOGA_COLOR_CONTROLS,
-  // );
 
   return (
     <>
@@ -1269,20 +1196,6 @@ export default function ShowcaseScene() {
         colors={ooltewahColors}
       />
 
-      <InDevelopmentBlock position={[38, GROUND_Y, 14]} />
-      <SiteBillboard label="Chattanooga" position={[38, GROUND_Y, -20]} />
-
-      {/*
-      <SiteStructure
-        siteName="Chattanooga"
-        position={[38, GROUND_Y, 14]}
-        width={32}
-        depth={28}
-        wallHeight={8.4}
-        roofRise={4.2}
-        colors={chattanoogaColors}
-      />
-      */}
     </>
   );
 }
