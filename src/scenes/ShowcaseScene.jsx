@@ -9,11 +9,13 @@ const OOLTEWAH_COLOR_CONTROLS = {
   canopySideColor: { value: "#2f6fb7", label: "Canopy Side" },
   canopyTopColor: { value: "#c49368", label: "Canopy Bot" },
   buildingWallsColor: { value: "#c49368", label: "Walls" },
+  buildingStripeColor: { value: "#c73f34", label: "Building Stripe" },
   buildingDoorColor: { value: "#c73f34", label: "Door" },
   roofColor: { value: "#2f6fb7", label: "Roof" },
   roofRidgeColor: { value: "#2f6fb7", label: "Ridges on Roof" },
   windowColor: { value: "#2f4f5f", label: "Windows" },
   windowTrimColor: { value: "#c73f34", label: "Window Trim" },
+  carwashTextColor: { value: "#c73f34", label: "CARWASH Text" },
 };
 
 // Chattanooga controls are parked while that site is represented as
@@ -619,6 +621,118 @@ function VacuumCanopy({
   );
 }
 
+function BuildingStripe({
+  width,
+  depth,
+  wallHeight,
+  leftExtensionWidth = 0,
+  leftExtensionFrontBump = 0,
+  color,
+}) {
+  const stripeHeight = 1.05;
+  const stripeY = wallHeight - 1.45;
+  const faceThickness = 0.14;
+  const faceOffset = 0.1;
+  const leftExtensionDepth = depth + leftExtensionFrontBump;
+  const leftExtensionCenterX = -width / 2 - leftExtensionWidth / 2;
+  const leftExtensionCenterZ = -leftExtensionFrontBump / 2;
+  const faces = [
+    {
+      key: "main-front",
+      position: [0, stripeY, -depth / 2 - faceOffset],
+      args: [width + faceThickness, stripeHeight, faceThickness],
+    },
+    {
+      key: "main-back",
+      position: [0, stripeY, depth / 2 + faceOffset],
+      args: [width + faceThickness, stripeHeight, faceThickness],
+    },
+    {
+      key: "main-right",
+      position: [width / 2 + faceOffset, stripeY, 0],
+      args: [faceThickness, stripeHeight, depth + faceThickness],
+    },
+  ];
+
+  if (leftExtensionWidth > 0) {
+    faces.push(
+      {
+        key: "extension-front",
+        position: [
+          leftExtensionCenterX,
+          stripeY,
+          -depth / 2 - leftExtensionFrontBump - faceOffset,
+        ],
+        args: [
+          leftExtensionWidth + faceThickness,
+          stripeHeight,
+          faceThickness,
+        ],
+      },
+      {
+        key: "extension-back",
+        position: [leftExtensionCenterX, stripeY, depth / 2 + faceOffset],
+        args: [
+          leftExtensionWidth + faceThickness,
+          stripeHeight,
+          faceThickness,
+        ],
+      },
+      {
+        key: "extension-left",
+        position: [
+          -width / 2 - leftExtensionWidth - faceOffset,
+          stripeY,
+          leftExtensionCenterZ,
+        ],
+        args: [
+          faceThickness,
+          stripeHeight,
+          leftExtensionDepth + faceThickness,
+        ],
+      },
+    );
+
+    if (leftExtensionFrontBump > 0) {
+      faces.push({
+        key: "extension-right-return",
+        position: [
+          -width / 2 + faceOffset,
+          stripeY,
+          -depth / 2 - leftExtensionFrontBump / 2,
+        ],
+        args: [
+          faceThickness,
+          stripeHeight,
+          leftExtensionFrontBump + faceThickness,
+        ],
+      });
+    }
+  } else {
+    faces.push({
+      key: "main-left",
+      position: [-width / 2 - faceOffset, stripeY, 0],
+      args: [faceThickness, stripeHeight, depth + faceThickness],
+    });
+  }
+
+  return (
+    <group>
+      {faces.map((face) => (
+        <mesh
+          key={face.key}
+          position={face.position}
+          castShadow
+          receiveShadow
+        >
+          <boxGeometry args={face.args} />
+          <meshStandardMaterial color={color} roughness={0.42} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 function BaseBuilding({
   siteName,
   width,
@@ -631,6 +745,8 @@ function BaseBuilding({
   doorColor,
   windowColor,
   windowTrimColor,
+  stripeColor,
+  carwashTextColor,
   hasOoltewahFront,
   roofRidgeAxis = "z",
   frontWindowPanelCount,
@@ -679,6 +795,16 @@ function BaseBuilding({
           />
           <meshStandardMaterial color={wallColor} roughness={0.54} />
         </mesh>
+      ) : null}
+      {stripeColor ? (
+        <BuildingStripe
+          width={width}
+          depth={depth}
+          wallHeight={wallHeight}
+          leftExtensionWidth={leftExtensionWidth}
+          leftExtensionFrontBump={leftExtensionFrontBump}
+          color={stripeColor}
+        />
       ) : null}
       {roofRidgeAxis === "x" ? (
         <>
@@ -804,7 +930,7 @@ function BaseBuilding({
             ]}
             rotation={[0, Math.PI / 2, 0]}
             background={null}
-            foreground={doorColor}
+            foreground={carwashTextColor ?? doorColor}
             fontSize={142}
             fontWeight={800}
           />
@@ -969,6 +1095,8 @@ function SiteStructure({
         doorColor={colors.buildingDoorColor}
         windowColor={colors.windowColor}
         windowTrimColor={colors.windowTrimColor}
+        stripeColor={colors.buildingStripeColor}
+        carwashTextColor={colors.carwashTextColor}
         hasOoltewahFront={hasOoltewahFront}
         roofRidgeAxis={roofRidgeAxis}
         frontWindowPanelCount={frontWindowPanelCount}
